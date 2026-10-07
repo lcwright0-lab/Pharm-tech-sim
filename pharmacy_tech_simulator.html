@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RxOS: Pharmacy Technician Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        /* Radio Toggle Styles */
+        .radio-toggle {
+            display: none;
+        }
+        .radio-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: white;
+            color: #64748b;
+            flex: 1;
+        }
+        .radio-label:hover {
+            background-color: #f8fafc;
+            border-color: #cbd5e1;
+        }
+        #legal-radio:checked + .radio-label {
+            background-color: #10b981; /* Emerald 500 */
+            border-color: #10b981;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+        }
+        #illegal-radio:checked + .radio-label {
+            background-color: #ef4444; /* Red 500 */
+            border-color: #ef4444;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);
+        }
+
+        /* Top Nav Bar */
+        .top-nav {
+            background-color: #0f172a;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        /* App Layout */
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 350px;
+            background-color: white;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            z-index: 5;
+        }
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+        }
+        .task-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+        .task-item {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .task-item:hover {
+            background-color: #f1f5f9;
+        }
+        .task-item.active {
+            background-color: #e0f2fe;
+            border-color: #7dd3fc;
+        }
+        .task-item.completed .status-indicator {
+            background-color: #10b981; /* Green */
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #f59e0b; /* Amber */
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #f1f5f9;
+            position: relative;
+        }
+        .content-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        /* Message / Scenario Bubble */
+        .interaction-bubble {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+            border-left: 6px solid #3b82f6;
+        }
+
+        /* Form Area */
+        .action-form {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Notification Toast */
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #10b981;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(150%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #toast.show {
+            transform: translateY(0);
+        }
+
+        /* Training Model Specific */
+        .training-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            border-left: none;
+        }
+        .worked-example {
+            background-color: rgba(255,255,255,0.1);
+            border: 1px dashed rgba(255,255,255,0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="top-nav">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-laptop-medical text-2xl text-blue-400"></i>
+            <h1 class="text-xl font-bold tracking-wide">RxOS Workspace</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-sm text-slate-300">
+                <i class="fa-solid fa-user-clock mr-1"></i> Shift: 0800 - 1600
+            </div>
+            <div class="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700">
+                <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold text-white shadow-sm">
+                    T
+                </div>
+                <span class="text-sm font-medium pr-2">Tech Trainee</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="app-container">
+        
+        <!-- Sidebar: Task Queue -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-inbox text-blue-500 mr-2"></i>Active Queue</h2>
+                <p class="text-sm text-slate-500 mt-1">Pending tasks and interactions.</p>
+                
+                <!-- Progress Bar -->
+                <div class="mt-4">
+                    <div class="flex justify-between text-xs text-slate-500 mb-1">
+                        <span>Completion</span>
+                        <span id="progress-text">0/13</span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-2">
+                        <div id="progress-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="task-list" id="task-list-container">
+                <!-- Tasks will be injected here by JS -->
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <div class="content-scroll-area" id="main-workspace">
+                <!-- Content injected by JS -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast">
+        <i class="fa-solid fa-circle-check text-xl"></i>
+        <span class="font-medium">Action Logged Successfully!</span>
+    </div>
+
+    <script>
+        // Data structure for the scenarios
+        const scenarios = [
+            {
+                id: 0,
+                type: 'training',
+                title: "System Training & Model",
+                sender: "RxOS Admin",
+                icon: "fa-solid fa-graduation-cap text-indigo-500",
+                message: `
+                    <h3 class="text-2xl font-bold mb-4 text-white">Welcome to the RxOS Sandbox!</h3>
+                    <p class="text-slate-300 text-lg mb-4">As a pharmacy technician, protecting your license and patient safety means knowing exactly what you can and cannot do legally. You have 13 scenarios in your queue.</p>
+                    <div class="bg-white/10 rounded-lg p-4 mb-4">
+                        <h4 class="font-bold text-blue-300 mb-2"><i class="fa-solid fa-clipboard-list mr-2"></i>Your Task for Every Scenario:</h4>
+                        <ol class="list-decimal list-inside text-slate-200 space-y-2 ml-2">
+                            <li><strong>Legal Determination:</strong> Select if the action is LEGAL or ILLEGAL for a tech.</li>
+                            <li><strong>Legal Reasoning:</strong> Explain your choice based on pharmacy law.</li>
+                            <li><strong>Proper Protocol:</strong> Type the script you would use to transfer the patient, or the exact procedure you would follow.</li>
+                        </ol>
+                    </div>
+                    <div class="worked-example">
+                        <h4 class="text-xl font-bold text-emerald-400 mb-3"><i class="fa-solid fa-magnifying-glass mr-2"></i> Worked Example</h4>
+                        <p class="text-slate-200 mb-4"><strong>Scenario:</strong> A patient asks you, "Which cough syrup is best for a dry, hacking cough?"</p>
+                        <div class="grid gap-3 text-sm">
+                            <div class="bg-slate-800 p-3 rounded border border-slate-600">
+                                <span class="text-slate-400 block mb-1">1. Determination</span>
+                                <span class="inline-block bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">ILLEGAL</span>
+                            </div>
+                            <div class="bg-slate-800 p-3 rounded border border-slate-600">
+                                <span class="text-slate-400 block mb-1">2. Legal Reasoning</span>
+                                <span class="text-slate-200">Recommending over-the-counter (OTC) medications requires clinical judgment and patient counseling, which is strictly restricted to the licensed pharmacist.</span>
+                            </div>
+                            <div class="bg-slate-800 p-3 rounded border border-slate-600">
+                                <span class="text-slate-400 block mb-1">3. Proper Protocol / Script</span>
+                                <span class="text-slate-200">"I am a pharmacy technician and cannot legally recommend medications, but let me get our pharmacist, Dr. Smith, over here to help you choose the best and safest option."</span>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 1,
+                type: 'scenario',
+                title: "OTC Recommendation Request",
+                sender: "Patient at Drop-off",
+                icon: "fa-solid fa-person text-emerald-600",
+                message: "A patient approaches the counter holding a box of Sudafed PE from the aisle, and points to the regular Sudafed kept behind the pharmacy counter. They ask you, <strong>'I have high blood pressure, which one of these is safer for my congestion?'</strong>"
+            },
+            {
+                id: 2,
+                type: 'scenario',
+                title: "Compounding Magic Mouthwash",
+                sender: "Task from Pharmacist",
+                icon: "fa-solid fa-mortar-pestle text-blue-600",
+                message: "A prescription calls for 'Magic Mouthwash' (a compound). The pharmacist hands you the formula worksheet. You measure the required liquid ingredients, mix them together in a graduated cylinder, and pour the final mixture into a dispensing bottle for the pharmacist to perform the final verification."
+            },
+            {
+                id: 3,
+                type: 'scenario',
+                title: "Food/Drug Interaction Question",
+                sender: "Patient at Pick-up",
+                icon: "fa-solid fa-comments text-emerald-600",
+                message: "A patient is picking up a new prescription for Warfarin (a blood thinner). As you ring them up, they ask, <strong>'My friend told me I can't eat spinach anymore while taking this. Is that true?'</strong>"
+            },
+            {
+                id: 4,
+                type: 'scenario',
+                title: "IV Compatibility Check",
+                sender: "Call from ICU Nurse",
+                icon: "fa-solid fa-phone-volume text-red-500",
+                message: "You are working the phones in the central hospital pharmacy. An ICU nurse calls and asks, <strong>'Can I run a Potassium Chloride drip through the same Y-site IV line as Amiodarone, or will they precipitate?'</strong>"
+            },
+            {
+                id: 5,
+                type: 'scenario',
+                title: "Inventory Management",
+                sender: "Monthly Maintenance Task",
+                icon: "fa-solid fa-boxes-stacked text-amber-600",
+                message: "While checking the shelves for outdates, you find a stock bottle of Lisinopril 20mg that expires at the end of the current month. You pull it from the active stock, document it in the expired medication log, and place it in the designated return-to-vendor bin."
+            },
+            {
+                id: 6,
+                type: 'scenario',
+                title: "Receiving Verbal Prescription",
+                sender: "Call from Dr. Office",
+                icon: "fa-solid fa-stethoscope text-purple-600",
+                message: "A local dentist calls the pharmacy. They state, <strong>'I need to call in a new verbal prescription for penicillin for my patient, John Doe. Are you ready to take down the sig and quantity?'</strong>"
+            },
+            {
+                id: 7,
+                type: 'scenario',
+                title: "Administration Instructions",
+                sender: "Patient at Consult Window",
+                icon: "fa-solid fa-syringe text-emerald-600",
+                message: "A patient is picking up their very first prescription for an EpiPen auto-injector. They look confused while looking at the box and ask you, <strong>'Do I inject this directly into my stomach or into my thigh?'</strong>"
+            },
+            {
+                id: 8,
+                type: 'scenario',
+                title: "Insurance Vacation Override",
+                sender: "Billing Exception",
+                icon: "fa-solid fa-file-invoice-dollar text-slate-600",
+                message: "A patient's prescription for a continuous glucose monitor is rejecting with a 'Refill Too Soon' error. You review their profile, notice they left a note that they are going on an extended vacation to Europe, and you call their insurance company to request and process a vacation override."
+            },
+            {
+                id: 9,
+                type: 'scenario',
+                title: "Handling C-II Medications",
+                sender: "Task from Pharmacist",
+                icon: "fa-solid fa-lock text-red-600",
+                message: "The pharmacist asks you to fill an e-prescription for 60 tablets of Adderall (a Schedule II controlled substance). You count the tablets twice on a dedicated tray, place them in the patient vial, and leave the stock bottle right next to the un-capped vial for the pharmacist to verify."
+            },
+            {
+                id: 10,
+                type: 'scenario',
+                title: "Final Verification Bypass",
+                sender: "Busy Pharmacist",
+                icon: "fa-solid fa-triangle-exclamation text-orange-500",
+                message: "The pharmacy is incredibly busy and the line is long. The pharmacist is stuck on a complex call with a doctor. They nod at you and say, <strong>'Just check those three refills in the basket. It's just maintenance meds, hand them out to the patients.'</strong> You visually verify the pills match the image on the screen, bag them, and ring the patients out."
+            },
+            {
+                id: 11,
+                type: 'scenario',
+                title: "Refill Authorization",
+                sender: "Call to Provider",
+                icon: "fa-solid fa-file-signature text-blue-500",
+                message: "A patient requests a refill on their daily blood pressure medication, but there are no refills left on the profile. You call the doctor's office, speak to the medical assistant who checks the chart, and they authorize three additional refills. You document the authorization name and date in the computer system."
+            },
+            {
+                id: 12,
+                type: 'scenario',
+                title: "System Allergy Alert",
+                sender: "Data Entry Warning",
+                icon: "fa-solid fa-shield-virus text-red-600",
+                message: "You are typing a new prescription for Bactrim (a sulfa-based antibiotic). The computer flashes a hard stop warning: 'Severe Sulfa Allergy'. You click the 'Override' button in the system, print the label, and fill the prescription so you can keep the production queue moving quickly."
+            },
+            {
+                id: 13,
+                type: 'scenario',
+                title: "Patient Profile Creation",
+                sender: "New Patient Intake",
+                icon: "fa-solid fa-id-card text-indigo-500",
+                message: "A new patient hands you their paper intake form and insurance card. You type their name, date of birth, address, phone number, and medical conditions (they listed asthma and diabetes) into their electronic patient profile in the pharmacy database."
+            }
+        ];
+
+        // State Management
+        let currentScenarioId = 0;
+        const userResponses = {}; // Store user inputs { id: { legalStatus, reasoning, protocol } }
+
+        function initApp() {
+            // Initialize empty responses
+            scenarios.forEach(s => {
+                if (s.type === 'scenario') {
+                    userResponses[s.id] = { status: null, reasoning: '', protocol: '' };
+                }
+            });
+            renderSidebar();
+            loadScenario(0);
+        }
+
+        function renderSidebar() {
+            const container = document.getElementById('task-list-container');
+            container.innerHTML = '';
+
+            let completedCount = 0;
+            const totalScenarios = scenarios.filter(s => s.type === 'scenario').length;
+
+            scenarios.forEach(s => {
+                const isCompleted = s.type === 'scenario' && 
+                                    userResponses[s.id].status !== null && 
+                                    userResponses[s.id].reasoning.trim() !== '' && 
+                                    userResponses[s.id].protocol.trim() !== '';
+                
+                if (isCompleted) completedCount++;
+
+                const item = document.createElement('div');
+                item.className = `task-item ${currentScenarioId === s.id ? 'active' : ''} ${isCompleted ? 'completed' : ''}`;
+                item.onclick = () => {
+                    saveCurrentData();
+                    loadScenario(s.id);
+                };
+
+                item.innerHTML = `
+                    <div class="status-indicator"></div>
+                    <div>
+                        <div class="text-sm font-bold text-slate-800">${s.type === 'training' ? 'START HERE' : 'Task ' + s.id}</div>
+                        <div class="text-xs text-slate-500 truncate w-48">${s.title}</div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
+            // Update Progress
+            document.getElementById('progress-text').innerText = `${completedCount}/${totalScenarios}`;
+            const percent = (completedCount / totalScenarios) * 100;
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+        }
+
+        function loadScenario(id) {
+            currentScenarioId = id;
+            const scenario = scenarios.find(s => s.id === id);
+            const workspace = document.getElementById('main-workspace');
+
+            if (scenario.type === 'training') {
+                workspace.innerHTML = `
+                    <div class="interaction-bubble training-card">
+                        ${scenario.message}
+                        <button onclick="loadScenario(1)" class="mt-8 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors w-full shadow-lg">
+                            Acknowledge Training & Start Task 1 <i class="fa-solid fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                `;
+            } else {
+                // Get saved data if any
+                const saved = userResponses[id];
+
+                workspace.innerHTML = `
+                    <div class="mb-4 text-sm font-semibold text-slate-500 uppercase tracking-wider">
+                        Active Interaction Log
+                    </div>
+                    
+                    <!-- Scenario Display -->
+                    <div class="interaction-bubble">
+                        <div class="flex items-center gap-3 mb-4 border-b border-slate-100 pb-4">
+                            <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xl">
+                                <i class="${scenario.icon}"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-800">${scenario.title}</h2>
+                                <p class="text-sm text-slate-500 font-medium">${scenario.sender}</p>
+                            </div>
+                        </div>
+                        <p class="text-lg text-slate-700 leading-relaxed">${scenario.message}</p>
+                    </div>
+
+                    <!-- Action Form -->
+                    <div class="action-form">
+                        <h3 class="text-lg font-bold text-slate-800 mb-6 border-b pb-2"><i class="fa-solid fa-pen-to-square text-blue-500 mr-2"></i>Documentation Required</h3>
+                        
+                        <!-- Question 1 -->
+                        <div class="mb-8">
+                            <label class="block text-sm font-bold text-slate-700 mb-3">1. Legal Determination</label>
+                            <p class="text-xs text-slate-500 mb-3">Is the action described legal for a pharmacy technician to perform?</p>
+                            <div class="flex gap-4">
+                                <input type="radio" id="legal-radio" name="determination" value="legal" class="radio-toggle" ${saved.status === 'legal' ? 'checked' : ''}>
+                                <label for="legal-radio" class="radio-label">LEGAL</label>
+                                
+                                <input type="radio" id="illegal-radio" name="determination" value="illegal" class="radio-toggle" ${saved.status === 'illegal' ? 'checked' : ''}>
+                                <label for="illegal-radio" class="radio-label">ILLEGAL</label>
+                            </div>
+                        </div>
+
+                        <!-- Question 2 -->
+                        <div class="mb-8">
+                            <label class="block text-sm font-bold text-slate-700 mb-2">2. Legal Reasoning</label>
+                            <p class="text-xs text-slate-500 mb-2">Explain why based on pharmacy law. Does this require clinical judgment? Is it an administrative task?</p>
+                            <textarea id="reasoning-input" class="w-full border-2 border-slate-200 rounded-lg p-3 text-slate-700" placeholder="Type your reasoning here...">${saved.reasoning}</textarea>
+                        </div>
+
+                        <!-- Question 3 -->
+                        <div class="mb-8">
+                            <label class="block text-sm font-bold text-slate-700 mb-2">3. Proper Protocol / Transfer Script</label>
+                            <p class="text-xs text-slate-500 mb-2">If illegal, what exact script do you use to transfer the patient/task? If legal, how do you proceed safely?</p>
+                            <textarea id="protocol-input" class="w-full border-2 border-slate-200 rounded-lg p-3 text-slate-700" placeholder="Type your script or procedure here...">${saved.protocol}</textarea>
+                        </div>
+
+                        <div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-100">
+                            <button onclick="saveAndNext(false)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">
+                                <i class="fa-solid fa-arrow-left mr-1"></i> Previous Task
+                            </button>
+                            <button onclick="saveAndNext(true)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-colors">
+                                Save & Next Task <i class="fa-solid fa-arrow-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Re-render sidebar to update active state
+            renderSidebar();
+            
+            // Scroll to top of workspace
+            workspace.scrollTop = 0;
+        }
+
+        function saveCurrentData() {
+            if (currentScenarioId === 0) return; // Don't save training slide
+
+            const legalRadio = document.getElementById('legal-radio');
+            const illegalRadio = document.getElementById('illegal-radio');
+            const reasoning = document.getElementById('reasoning-input');
+            const protocol = document.getElementById('protocol-input');
+
+            // Only attempt to save if the elements exist on screen
+            if (legalRadio && reasoning && protocol) {
+                let status = null;
+                if (legalRadio.checked) status = 'legal';
+                if (illegalRadio.checked) status = 'illegal';
+
+                userResponses[currentScenarioId] = {
+                    status: status,
+                    reasoning: reasoning.value,
+                    protocol: protocol.value
+                };
+            }
+        }
+
+        function saveAndNext(isNext) {
+            saveCurrentData();
+            showToast();
+            renderSidebar(); // Update completion status colors
+            
+            let nextId = isNext ? currentScenarioId + 1 : currentScenarioId - 1;
+            
+            // Boundary checks
+            if (nextId < 1) nextId = 1; // Don't go back to training implicitly
+            if (nextId > 13) nextId = 13; // Stay on last task if clicking next on 13
+            
+            loadScenario(nextId);
+        }
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+
+        // Initialize App on load
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
